@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  web:
+    image: anime-social/web:staging
+    restart: always
+    ports:
+      - "80:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+
+  server:
+    image: anime-social/server:staging
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=${REDIS_URL}
+      - ELASTICSEARCH_NODE=${ELASTICSEARCH_NODE}
+    depends_on:
+      - db
+      - mongodb
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    restart: always
+    volumes:
+      - mongodb_staging_data:/data/db
+
+volumes:
+  postgres_staging_data:
+  mongodb_staging_data:

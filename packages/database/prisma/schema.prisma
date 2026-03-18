@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+  HIDDEN
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  FRIENDS
+  PRIVATE
+}
+
+enum AnimeStatus {
+  WATCHING
+  COMPLETED
+  ON_HOLD
+  DROPPED
+  PLAN_TO_WATCH
+}
+
+enum MangaStatus {
+  READING
+  COMPLETED
+  DROPPED
+  PLAN_TO_READ
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  username        String           @unique
+  password        String
+  emailVerified   Boolean          @default(false)
+  role            String           @default("USER") // USER, ADMIN
+  status          UserStatus       @default(OFFLINE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  profile         Profile?
+  authSessions    AuthSession[]
+  notifications   Notification[]
+  animeList       AnimeList[]
+  mangaList       MangaList[]
+  friendships     Friendship[]     @relation("UserFriendships")
+  receivedFriends Friendship[]     @relation("ReceivedFriendships")
+  follows         Follow[]         @relation("UserFollowing")
+  followers       Follow[]         @relation("UserFollowers")
+  achievements    UserAchievement[]
+  badges          UserBadge[]
+  reviews         Review[]
+}
+
+model Profile {
+  id                String            @id @default(uuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id])
+  displayName       String?
+  bio               String?           @db.Text
+  avatarUrl         String?
+  bannerUrl         String?
+  gender            String?
+  birthday          DateTime?
+  location          String?
+  website           String?
+  socialLinks       Json?             // { twitter: string, discord: string, etc }
+  
+  // Anime Profile Card
+  topAnimeIds       String[]          // Array of MAL/AniList IDs
+  topMangaIds       String[]
+  favCharacterIds   String[]
+  
+  // Privacy Settings
+  visibility        ProfileVisibility @default(PUBLIC)
+  showAnimeList     Boolean           @default(true)
+  showMangaList     Boolean           @default(true)
+  showAge           Boolean           @default(false)
+  
+  // Stats
+  totalWatchHours   Float             @default(0)
+  totalChaptersRead Int               @default(0)
+}
+
+model AuthSession {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  userAgent   String?
+  ipAddress   String?
+  token       String?  @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model AnimeEntry {
+  id          String      @id @default(uuid())
+  malId       Int         @unique
+  aniId       Int?        @unique
+  titleEn     String
+  titleJp     String?
+  titleRo     String?
+  synopsis    String?     @db.Text
+  type        String?     // TV, Movie, OVA
+  episodes    Int?
+  status      String?     // Finished Airing, Currently Airing
+  airedFrom   DateTime?
+  airedTo     DateTime?
+  duration    String?
+  rating      String?
+  score       Float?
+  images      Json?
+  genres      String[]
+  studios     String[]
+  
+  userLists   AnimeList[]
+}
+
+model AnimeList {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  animeId     String
+  anime       AnimeEntry  @relation(fields: [animeId], references: [id])
+  status      AnimeStatus @default(PLAN_TO_WATCH)
+  progress    Int         @default(0) // Episode count
+  score       Int?        // 1-10
+  notes       String?     @db.Text
+  startDate   DateTime?
+  finishDateTime DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([userId, animeId])
+}
+
+model MangaEntry {
+  id          String      @id @default(uuid())
+  malId       Int         @unique
+  aniId       Int?        @unique
+  titleEn     String
+  titleJp     String?
+  titleRo     String?
+  synopsis    String?     @db.Text
+  chapters    Int?
+  volumes     Int?
+  status      String?
+  publishedFrom DateTime?
+  publishedTo   DateTime?
+  score       Float?
+  images      Json?
+  genres      String[]
+  authors     String[]
+  
+  userLists   MangaList[]
+}
+
+model MangaList {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  mangaId     String
+  manga       MangaEntry  @relation(fields: [mangaId], references: [id])
+  status      MangaStatus @default(PLAN_TO_READ)
+  progress    Int         @default(0) // Chapter count
+  score       Int?
+  notes       String?     @db.Text
+  startDate   DateTime?
+  finishDateTime DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([userId, mangaId])
+}
+
+model Friendship {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("UserFriendships", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("ReceivedFriendships", fields: [receiverId], references: [id])
+  status      String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id])
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  actorId     String?
+  entityType  String?
+  entityId    String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  imageUrl    String?
+  criteria    Json?
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  earnedAt  DateTime @default(now())
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  expReward   Int      @default(0)
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  earnedAt      DateTime    @default(now())
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  entityType  String   // ANIME, MANGA
+  entityId    String
+  scoreTotal  Int
+  scoreDetail Json?    // { story, art, character, etc }
+  content     String   @db.Text
+  hasSpoiler  Boolean  @default(false)
+  isHelpful   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

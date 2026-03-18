@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: anime-social-web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: anime-social-server
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:password@db:5432/anime_social?schema=public
+      - MONGODB_URI=mongodb://mongodb:27017/anime_social
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: anime_social
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    restart: always
+    volumes:
+      - mongodb_prod_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    volumes:
+      - elastic_prod_data:/usr/share/elasticsearch/data
+
+volumes:
+  postgres_prod_data:
+  mongodb_prod_data:
+  elastic_prod_data:
