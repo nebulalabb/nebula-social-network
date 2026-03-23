@@ -1,0 +1,28 @@
+{
+  "name": "@anime-social/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "migrate": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
+    "seed": "npx prisma db seed",
+    "studio": "prisma studio --schema=prisma/schema.prisma",
+    "generate": "prisma generate --schema=prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "dotenv": "^16.4.5",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "prisma": "^7.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.5"
+  }
+}

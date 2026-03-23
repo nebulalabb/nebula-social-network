@@ -7,12 +7,18 @@ export const useLogin = () => {
 
   return useMutation({
     mutationFn: async (credentials: any) => {
+      // Response: { status, accessToken, user } hoặc { status, data: { twoFactorRequired, userId } }
       const { data } = await apiClient.post("/auth/login", credentials);
-      return data.data;
+      return data;
     },
     onSuccess: (data) => {
-      setAuth(data.user, data.accessToken);
-      localStorage.setItem("accessToken", data.accessToken);
+      // Chỉ lưu auth nếu không cần 2FA
+      if (!data.data?.twoFactorRequired && data.accessToken && data.user) {
+        setAuth(data.user, data.accessToken);
+        localStorage.setItem("accessToken", data.accessToken);
+        // Set cookie để middleware đọc được
+        document.cookie = `accessToken=${data.accessToken}; path=/; max-age=${14 * 60}; SameSite=Strict`;
+      }
     },
   });
 };
@@ -20,6 +26,7 @@ export const useLogin = () => {
 export const useRegister = () => {
   return useMutation({
     mutationFn: async (userData: any) => {
+      // Response: { status, message, data: { user } }
       const { data } = await apiClient.post("/auth/register", userData);
       return data.data;
     },

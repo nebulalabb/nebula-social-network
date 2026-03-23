@@ -61,3 +61,29 @@ export const requireEmailVerified = (req: AuthRequest, res: Response, next: Next
 };
 
 export const requireAdmin = restrictTo("ADMIN");
+
+// Alias for protect
+export const authenticate = protect;
+
+// Optional auth - attaches user if token present, but doesn't fail if not
+export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    let token;
+    if (req.headers.authorization?.startsWith("Bearer")) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+    if (!token) return next();
+
+    const decoded = verifyAccessToken(token);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, username: true, role: true, status: true, emailVerified: true },
+    });
+    if (user) req.user = user;
+    next();
+  } catch {
+    next();
+  }
+};

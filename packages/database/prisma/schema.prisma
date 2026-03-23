@@ -60,6 +60,15 @@ model User {
   achievements    UserAchievement[]
   badges          UserBadge[]
   reviews         Review[]
+  expLogs         EXPLog[]
+  ownedClubs      Club[]            @relation("ClubOwner")
+  clubMemberships ClubMember[]      @relation("ClubMemberships")
+  blocking        Block[]           @relation("BlockerUser")
+  blockedBy       Block[]           @relation("BlockedUser")
+  dailyLogins     DailyLogin[]
+  spoilerSettings SpoilerSetting[]
+  avatar          UserAvatar?
+  ownedRooms      Room[]            @relation("RoomOwner")
 }
 
 model Profile {
@@ -265,6 +274,304 @@ model Review {
   content     String   @db.Text
   hasSpoiler  Boolean  @default(false)
   isHelpful   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EXPLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Club {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?      @db.Text
+  avatarUrl   String?
+  bannerUrl   String?
+  category    String       @default("GENERAL") // ANIME, MANGA, GENERAL, COSPLAY, FANART
+  isPrivate   Boolean      @default(false)
+  ownerId     String
+  owner       User         @relation("ClubOwner", fields: [ownerId], references: [id])
+  members     ClubMember[]
+  events      Event[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model ClubMember {
+  id       String   @id @default(uuid())
+  clubId   String
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation("ClubMemberships", fields: [userId], references: [id])
+  role     String   @default("MEMBER") // OWNER, ADMIN, MEMBER
+  joinedAt DateTime @default(now())
+
+  @@unique([clubId, userId])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlockerUser", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("BlockedUser", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model DailyLogin {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime @default(now()) @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model SpoilerSetting {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  animeId   String   // MAL ID
+  progress  Int      @default(0) // episode progress
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, animeId])
+}
+
+// ─── 3D Avatar & Room System ──────────────────────────────────────────────────
+
+model UserAvatar {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName  String?
+  vrmUrl       String?
+  thumbnailUrl String?
+  isPublic     Boolean  @default(true)
+  pose         String?  @default("idle")
+  emotion      String?  @default("neutral")
+  height       Float?   @default(1.7)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model World {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  rooms     Room[]
+}
+
+model Room {
+  id          String      @id @default(uuid())
+  ownerId     String
+  owner       User        @relation("RoomOwner", fields: [ownerId], references: [id])
+  worldId     String?
+  world       World?      @relation(fields: [worldId], references: [id])
+  name        String
+  description String?
+  isPublic    Boolean     @default(false)
+  maxUsers    Int         @default(10)
+  theme       String?     @default("default")
+  musicUrl    String?
+  spawnX      Float       @default(0)
+  spawnY      Float       @default(0)
+  spawnZ      Float       @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  decors      RoomDecor[]
+}
+
+model RoomDecor {
+  id       String  @id @default(uuid())
+  roomId   String
+  room     Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  assetId  String?
+  asset    Asset?  @relation(fields: [assetId], references: [id])
+  type     String
+  assetUrl String?
+  posX     Float   @default(0)
+  posY     Float   @default(0)
+  posZ     Float   @default(0)
+  rotY     Float   @default(0)
+  scale    Float   @default(1)
+
+  @@index([roomId])
+}
+
+model Asset {
+  id        String      @id @default(uuid())
+  name      String
+  type      String      // chair, table, poster, shelf, lamp, etc.
+  category  String      // furniture, decoration, anime, manga
+  assetUrl  String
+  thumbnail String?
+  scale     Float       @default(1)
+  isPublic  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  decors    RoomDecor[]
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+
+model Event {
+  id           String             @id @default(uuid())
+  title        String
+  description  String?            @db.Text
+  type         String             @default("GENERAL") // QUIZ, FANART, WATCHPARTY, COSPLAY, GENERAL
+  startAt      DateTime
+  endAt        DateTime?
+  clubId       String?
+  club         Club?              @relation(fields: [clubId], references: [id])
+  creatorId    String
+  isPublic     Boolean            @default(true)
+  bannerUrl    String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  participants EventParticipant[]
+}
+
+model EventParticipant {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  status    String   @default("GOING") // GOING, INTERESTED, NOT_GOING
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+// ─── Fan Content ──────────────────────────────────────────────────────────────
+
+model FanArt {
+  id             String   @id @default(uuid())
+  authorId       String
+  title          String
+  description    String?  @db.Text
+  images         String[] // S3 URLs
+  tags           String[] // anime/manga/character names
+  allowDownload  Boolean  @default(false)
+  viewCount      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model FanFic {
+  id          String         @id @default(uuid())
+  authorId    String
+  title       String
+  summary     String?        @db.Text
+  coverUrl    String?
+  tags        String[]
+  warnings    String[]       // violence, dark, etc.
+  language    String         @default("vi")
+  status      String         @default("ONGOING") // ONGOING, COMPLETED, HIATUS
+  viewCount   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  chapters    FanFicChapter[]
+}
+
+model FanFicChapter {
+  id        String   @id @default(uuid())
+  fanFicId  String
+  fanFic    FanFic   @relation(fields: [fanFicId], references: [id], onDelete: Cascade)
+  title     String
+  content   String   @db.Text
+  order     Int      @default(1)
+  wordCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fanFicId])
+}
+
+model Cosplay {
+  id          String   @id @default(uuid())
+  authorId    String
+  title       String
+  description String?  @db.Text
+  images      String[]
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── News ─────────────────────────────────────────────────────────────────────
+
+model NewsArticle {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String?  @db.Text
+  url         String   @unique
+  imageUrl    String?
+  source      String   // crunchyroll, ann, etc.
+  category    String   @default("ANIME") // ANIME, MANGA, GAME, MERCHANDISE
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+model Report {
+  id           String   @id @default(uuid())
+  reporterId   String
+  entityType   String   // POST, COMMENT, USER, FANART, FANFIC
+  entityId     String
+  reason       String
+  description  String?  @db.Text
+  status       String   @default("PENDING") // PENDING, RESOLVED, DISMISSED
+  resolvedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ─── Premium & Monetization ───────────────────────────────────────────────────
+
+model PremiumSubscription {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  plan      String    @default("MONTHLY") // MONTHLY, YEARLY
+  status    String    @default("ACTIVE") // ACTIVE, CANCELLED, EXPIRED
+  startAt   DateTime  @default(now())
+  endAt     DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model CoinTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // PURCHASE, SPEND, DONATE, EARN
+  amount      Int
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model CreatorProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  bio         String?  @db.Text
+  totalEarned Int      @default(0)
+  isVerified  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

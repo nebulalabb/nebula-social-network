@@ -16,7 +16,13 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: !!user }),
-      logout: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+      logout: () => {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("accessToken");
+          document.cookie = "accessToken=; path=/; max-age=0";
+        }
+        set({ user: null, accessToken: null, isAuthenticated: false });
+      },
     }),
     {
       name: "auth-storage",

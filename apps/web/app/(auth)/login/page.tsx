@@ -36,12 +36,14 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     loginMutation.mutate(data, {
       onSuccess: (res: any) => {
-        if (res.twoFactorRequired) {
+        // res = { status, accessToken, user } hoặc { status, data: { twoFactorRequired, userId } }
+        if (res.data?.twoFactorRequired) {
           toast.info("Vui lòng thực hiện bước xác thực 2FA.");
-          router.push(`/2fa?userId=${res.userId}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+          router.push(`/2fa?userId=${res.data.userId}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
         } else {
           toast.success("Đăng nhập thành công!");
-          router.push(callbackUrl);
+          // Dùng full reload để middleware đọc được cookie mới
+          window.location.href = callbackUrl;
         }
       },
       onError: (error: any) => {
@@ -149,15 +151,20 @@ export default function LoginPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <button className="flex h-10 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          Google
-        </button>
-        <button className="flex h-10 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          Discord
-        </button>
-        <button className="flex h-10 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          Facebook
-        </button>
+        {[
+          { label: "Google", provider: "google" },
+          { label: "Discord", provider: "discord" },
+          { label: "Facebook", provider: "facebook" },
+        ].map(({ label, provider }) => (
+          <button
+            key={provider}
+            type="button"
+            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/auth/${provider}`}
+            className="flex h-10 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <p className="text-center text-sm text-slate-500 dark:text-slate-400">

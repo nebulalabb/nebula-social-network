@@ -217,12 +217,19 @@ export default function RegisterPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <button className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          Google
-        </button>
-        <button className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          Discord
-        </button>
+        {[
+          { label: "Google", provider: "google" },
+          { label: "Discord", provider: "discord" },
+        ].map(({ label, provider }) => (
+          <button
+            key={provider}
+            type="button"
+            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/auth/${provider}`}
+            className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <p className="text-center text-sm text-slate-500 dark:text-slate-400">

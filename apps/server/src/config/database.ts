@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import mongoose from "mongoose";
 import pino from "pino";
+import dotenv from "dotenv";
+import path from "path";
+
+// Load .env explicitly from monorepo root (4 levels up from this file)
+dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 
 const logger = pino({
   transport: {
@@ -9,8 +16,12 @@ const logger = pino({
   },
 });
 
-// Prisma for PostgreSQL
-export const prisma = new PrismaClient();
+// Pool created after dotenv loaded
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+const adapter = new PrismaPg(pool);
+export const prisma = new PrismaClient({ adapter });
 
 // Mongoose for MongoDB
 export const connectMongoDB = async () => {
@@ -20,7 +31,7 @@ export const connectMongoDB = async () => {
     logger.info("🍃 Connected to MongoDB");
   } catch (error) {
     logger.error("❌ MongoDB connection error:", error);
-    process.exit(1);
+    // Don't exit — server can still serve non-MongoDB routes
   }
 };
 
@@ -31,6 +42,6 @@ export const connectPostgreSQL = async () => {
     logger.info("🐘 Connected to PostgreSQL via Prisma");
   } catch (error) {
     logger.error("❌ PostgreSQL connection error:", error);
-    process.exit(1);
+    // Don't exit — let server start, requests will fail gracefully
   }
 };

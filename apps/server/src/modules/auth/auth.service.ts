@@ -62,7 +62,7 @@ export class AuthService {
       throw new AppError(401, "Email hoặc mật khẩu không chính xác");
     }
 
-    if (!user.emailVerified) {
+    if (!user.emailVerified && process.env.NODE_ENV === "production") {
       throw new AppError(401, "Vui lòng xác minh email trước khi đăng nhập");
     }
 

@@ -36,13 +36,13 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 240 50% 4%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 240 40% 5%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 240 40% 5%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%;
@@ -72,5 +72,52 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: #080811;
   }
+}
+
+@layer components {
+  .feed-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: border-color 0.2s;
+  }
+  .feed-card:hover {
+    border-color: rgba(168, 85, 247, 0.25);
+  }
+  .story-ring-animated {
+    background: linear-gradient(270deg, #ec4899, #8b5cf6, #06b6d4, #ec4899);
+    background-size: 200% 200%;
+    animation: story-ring 3s ease infinite;
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-move 1.6s linear infinite;
+  }
+  .shimmer-btn {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6, #ec4899);
+    background-size: 200% 100%;
+    animation: shimmer-btn 2s linear infinite;
+  }
+}
+
+@keyframes story-ring {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes shimmer-move {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes shimmer-btn {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useRef, ReactNode } from "react";
 import { useAuthStore } from "../../store/use-auth-store";
 import apiClient from "../../lib/api-client";
+import { useSocket } from "../../hooks/use-socket";
+import { useNotificationStore } from "../../store/use-notification-store";
 
 interface AuthContextType {
   user: any;
@@ -18,8 +20,14 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+function SocketInitializer() {
+  useSocket();
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, accessToken, setAuth, logout } = useAuthStore();
+  const { user, accessToken, setAuth, logout, isAuthenticated } = useAuthStore();
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshAccessToken = async () => {
@@ -36,25 +44,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user || !accessToken) return;
-
-    // Đặt cookie để middleware có thể đọc
     document.cookie = `accessToken=${accessToken}; path=/; max-age=${14 * 60}`;
-
-    // Auto-refresh token mỗi 14 phút
     intervalRef.current = setInterval(refreshAccessToken, 14 * 60 * 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, accessToken]);
 
+  // Fetch unread notification count on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiClient.get("/notifications/unread-count")
+      .then(({ data }) => setUnreadCount(data.data?.count || 0))
+      .catch(() => {});
+  }, [isAuthenticated]);
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      isLoading: false 
-    }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading: false }}>
+      {isAuthenticated && <SocketInitializer />}
       {children}
     </AuthContext.Provider>
   );

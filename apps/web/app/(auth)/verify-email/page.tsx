@@ -129,6 +129,34 @@ export default function VerifyEmailPage() {
           {resendMutation.isPending ? "Đang xử lý..." : "Chưa nhận được mã? Gửi lại"}
         </button>
       </div>
+
+      {/* Dev helper: chỉ hiện trong development */}
+      {process.env.NODE_ENV !== "production" && (
+        <div className="border border-dashed border-yellow-400 rounded-lg p-3 bg-yellow-50 dark:bg-yellow-950/20">
+          <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-2">🛠 Dev mode — lấy OTP từ server</p>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/auth/dev/otp/${userId}`);
+                const json = await res.json();
+                if (json.otp) {
+                  const digits = json.otp.split("");
+                  setOtp(digits);
+                  toast.success(`OTP: ${json.otp}`);
+                } else {
+                  toast.error("Không tìm thấy OTP. Thử gửi lại.");
+                }
+              } catch {
+                toast.error("Không lấy được OTP từ server.");
+              }
+            }}
+            className="text-xs bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold px-3 py-1 rounded"
+          >
+            Lấy OTP tự động
+          </button>
+        </div>
+      )}
     </div>
   );
 }

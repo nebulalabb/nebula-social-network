@@ -1,7 +1,6 @@
-/** @type {import('tailwindcss').Config} */
-import animate from "tailwindcss-animate";
+import type { Config } from "tailwindcss";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
   content: [
     './pages/**/*.{ts,tsx}',
@@ -68,12 +67,44 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "slide-up-fade": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "story-ring": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.6", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.08)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "slide-up-fade": "slide-up-fade 0.4s ease-out both",
+        "shimmer": "shimmer 2s linear infinite",
+        "story-ring": "story-ring 3s ease infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
     },
   },
-  plugins: [animate],
-}
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }: any) {
+      addUtilities({
+        ".safe-area-pb": {
+          "padding-bottom": "env(safe-area-inset-bottom, 0px)",
+        },
+      });
+    },
+  ],
+};
+
+export default config;

@@ -55,6 +55,15 @@ router.post("/verify-email", authController.verifyEmail);
 router.post("/resend-verification", authController.resendVerification);
 router.post("/refresh", authController.refreshToken);
 
+// Dev-only: lấy OTP từ Redis để test (không dùng trong production)
+if (process.env.NODE_ENV !== "production") {
+  router.get("/dev/otp/:userId", async (req, res) => {
+    const { redis } = await import("../../config/redis");
+    const otp = await redis.get(`otp:verify:${req.params.userId}`);
+    res.json({ otp: otp || null });
+  });
+}
+
 // Protected routes
 router.get("/sessions", protect, authController.getSessions);
 router.delete("/sessions/:sessionId", protect, authController.revokeSession);

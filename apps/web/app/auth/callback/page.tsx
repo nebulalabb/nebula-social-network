@@ -2,39 +2,35 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuthStore } from "../../store/use-auth-store";
-import { toast } from "sonner";
+import { useAuthStore } from "../../../store/use-auth-store";
+import apiClient from "../../../lib/api-client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   useEffect(() => {
     const token = searchParams.get("token");
-    const userStr = searchParams.get("user");
+    if (!token) { router.replace("/login"); return; }
 
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(decodeURIComponent(userStr));
-        setAuth(user, token);
-        localStorage.setItem("accessToken", token);
-        toast.success("Đăng nhập bằng mạng xã hội thành công!");
-        router.push("/");
-      } catch (error) {
-        toast.error("Lỗi xử lý dữ liệu đăng nhập.");
-        router.push("/login");
-      }
-    } else {
-      toast.error("Không tìm thấy thông tin đăng nhập.");
-      router.push("/login");
-    }
-  }, [searchParams, setAuth, router]);
+    localStorage.setItem("accessToken", token);
+    document.cookie = `accessToken=${token}; path=/; max-age=${14 * 60}`;
+
+    // Fetch user info
+    apiClient.get("/users/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(({ data }) => {
+      setAuth(data.data.user, token);
+      router.replace("/");
+    }).catch(() => {
+      router.replace("/login");
+    });
+  }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="w-12 h-12 border-4 border-pink-600 border-t-transparent rounded-full animate-spin"></div>
-      <p className="mt-4 text-slate-500">Đang xử lý đăng nhập...</p>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-pink-600/30 border-t-pink-600 rounded-full animate-spin" />
     </div>
   );
 }
